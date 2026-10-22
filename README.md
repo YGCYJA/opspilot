@@ -3,9 +3,11 @@
 [![CI](https://github.com/YGCYJA/opspilot/actions/workflows/ci.yml/badge.svg)](https://github.com/YGCYJA/opspilot/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
+OpsPilot 是一个可本地运行的故障分析助手，结合 Markdown 知识库检索（RAG）、只读日志统计和证据引用，帮助查阅排障资料、分析指定时间段内的请求与延迟。提供命令行和 FastAPI 接口，默认离线运行，也可接入本地模型或 HTTP 模型服务；内置检索评测与可复现的本机 HTTP 故障注入实验。
+
 An inspectable incident assistant that combines Markdown knowledge retrieval, read-only log analysis, and evidence-linked answers. Run it locally through a CLI or FastAPI, with an offline baseline and optional local or HTTP model backends.
 
-[中文说明](README.zh-CN.md) · [Architecture](docs/architecture.md) · [Configuration](docs/configuration.md) · [API](docs/api.md) · [Evaluation](docs/evaluation.md) · [Fault lab](docs/fault-lab.md)
+[完整中文说明](README.zh-CN.md) · [Architecture](docs/architecture.md) · [Configuration](docs/configuration.md) · [API](docs/api.md) · [Evaluation](docs/evaluation.md) · [Fault lab](docs/fault-lab.md)
 
 ## What it does
 

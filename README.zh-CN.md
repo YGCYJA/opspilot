@@ -1,6 +1,6 @@
 # OpsPilot
 
-OpsPilot 是一个可本地运行、能够检查执行过程的故障分析助手。它从 Markdown 知识库检索资料，调用只读工具统计日志，并在回答中附带证据引用。支持命令行、FastAPI、离线规则流程，以及可选的本地模型和 HTTP 模型接口。
+OpsPilot 是一个可本地运行的故障分析助手，结合 Markdown 知识库检索（RAG）、只读日志统计和证据引用，帮助查阅排障资料、分析指定时间段内的请求与延迟。提供命令行和 FastAPI 接口，默认离线运行，也可接入本地模型或 HTTP 模型服务；内置检索评测与可复现的本机 HTTP 故障注入实验。
 
 [English README](README.md) · [架构](docs/architecture.md) · [配置](docs/configuration.md) · [API](docs/api.md) · [评测](docs/evaluation.md) · [故障实验](docs/fault-lab.md)
 

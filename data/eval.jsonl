@@ -1,0 +1,46 @@
+{"id": "dev-retrieval-00", "split": "dev", "kind": "retrieval", "question": "401接口认证失败如何检查", "relevant_docs": ["auth.md"]}
+{"id": "dev-retrieval-01", "split": "dev", "kind": "retrieval", "question": "429怎么做指数退避重试", "relevant_docs": ["rate_limit.md"]}
+{"id": "dev-retrieval-02", "split": "dev", "kind": "retrieval", "question": "SSE流式输出断开怎么处理", "relevant_docs": ["timeout.md"]}
+{"id": "dev-retrieval-03", "split": "dev", "kind": "retrieval", "question": "什么情况建议回滚版本", "relevant_docs": ["deployment.md"]}
+{"id": "dev-retrieval-04", "split": "dev", "kind": "retrieval", "question": "文档切分应该保留哪些来源信息", "relevant_docs": ["retrieval.md"]}
+{"id": "dev-retrieval-05", "split": "dev", "kind": "retrieval", "question": "缓存键怎么避免租户数据泄漏", "relevant_docs": ["cache.md"]}
+{"id": "dev-retrieval-06", "split": "dev", "kind": "retrieval", "question": "连接池耗尽需要检查什么", "relevant_docs": ["database.md"]}
+{"id": "dev-retrieval-07", "split": "dev", "kind": "retrieval", "question": "消息重复消费怎么保证幂等", "relevant_docs": ["queue.md"]}
+{"id": "dev-retrieval-08", "split": "dev", "kind": "retrieval", "question": "不同session_id会共享记忆吗", "relevant_docs": ["memory.md"]}
+{"id": "dev-retrieval-09", "split": "dev", "kind": "retrieval", "question": "HTTP错误率和服务端错误率有何区别", "relevant_docs": ["observability.md"]}
+{"id": "test-retrieval-10", "split": "test", "kind": "retrieval", "question": "API返回HTTP 401，Authorization头该怎样设置", "relevant_docs": ["auth.md"]}
+{"id": "test-retrieval-11", "split": "test", "kind": "retrieval", "question": "身份有效却403，换一把新密钥能解决吗", "relevant_docs": ["auth.md"]}
+{"id": "test-retrieval-12", "split": "test", "kind": "retrieval", "question": "密钥轮换时先撤销旧密钥还是先验证新密钥", "relevant_docs": ["auth.md"]}
+{"id": "test-retrieval-13", "split": "test", "kind": "retrieval", "question": "被限流后能不能一直立即重试", "relevant_docs": ["rate_limit.md"]}
+{"id": "test-retrieval-14", "split": "test", "kind": "retrieval", "question": "请求数没有用完为什么还会触发Token限制", "relevant_docs": ["rate_limit.md"]}
+{"id": "test-retrieval-15", "split": "test", "kind": "retrieval", "question": "网关HTTP 504需要检查哪些超时和队列指标", "relevant_docs": ["timeout.md"]}
+{"id": "test-retrieval-16", "split": "test", "kind": "retrieval", "question": "TTFT和总延迟有什么区别", "relevant_docs": ["timeout.md"]}
+{"id": "test-retrieval-17", "split": "test", "kind": "retrieval", "question": "新版本灰度应该先放多少流量观察多久", "relevant_docs": ["deployment.md"]}
+{"id": "test-retrieval-18", "split": "test", "kind": "retrieval", "question": "readiness和liveness探针用途是否相同", "relevant_docs": ["deployment.md"]}
+{"id": "test-retrieval-19", "split": "test", "kind": "retrieval", "question": "RRF为什么融合排名而非直接相加分数", "relevant_docs": ["retrieval.md"]}
+{"id": "test-retrieval-20", "split": "test", "kind": "retrieval", "question": "Recall@3与MRR分别衡量什么", "relevant_docs": ["retrieval.md"]}
+{"id": "test-retrieval-21", "split": "test", "kind": "retrieval", "question": "扫描PDF能直接作为本项目知识库输入吗", "relevant_docs": ["retrieval.md"]}
+{"id": "test-retrieval-22", "split": "test", "kind": "retrieval", "question": "知识库更新后缓存里的旧答案如何处理", "relevant_docs": ["cache.md"]}
+{"id": "test-retrieval-23", "split": "test", "kind": "retrieval", "question": "缓存命中率的分母是什么", "relevant_docs": ["cache.md"]}
+{"id": "test-retrieval-24", "split": "test", "kind": "retrieval", "question": "数据库连接池耗尽时直接扩大上限可以吗", "relevant_docs": ["database.md"]}
+{"id": "test-retrieval-25", "split": "test", "kind": "retrieval", "question": "数据库事务超时后重试有什么重复写入风险", "relevant_docs": ["database.md"]}
+{"id": "test-retrieval-26", "split": "test", "kind": "retrieval", "question": "消费者积压要观察哪些指标", "relevant_docs": ["queue.md"]}
+{"id": "test-retrieval-27", "split": "test", "kind": "retrieval", "question": "失败消息超过重试预算后放到哪里", "relevant_docs": ["queue.md"]}
+{"id": "test-retrieval-28", "split": "test", "kind": "retrieval", "question": "session_id可以当作身份认证凭据吗", "relevant_docs": ["memory.md"]}
+{"id": "test-retrieval-29", "split": "test", "kind": "retrieval", "question": "模型生成的对话摘要可以当可靠事实吗", "relevant_docs": ["memory.md"]}
+{"id": "test-retrieval-30", "split": "test", "kind": "retrieval", "question": "P95延迟用哪个排序位置计算", "relevant_docs": ["observability.md"]}
+{"id": "test-retrieval-31", "split": "test", "kind": "retrieval", "question": "没有供应商usage数据能说真实费用是零吗", "relevant_docs": ["billing.md"]}
+{"id": "test-retrieval-32", "split": "test", "kind": "retrieval", "question": "诊断orders-api发布后的连接池问题，需要哪些记录和检查", "relevant_docs": ["incident.md", "database.md"]}
+{"id": "test-retrieval-33", "split": "test", "kind": "retrieval", "question": "orders-api该不该回滚，请结合事件记录和回滚阈值判断", "relevant_docs": ["incident.md", "deployment.md"]}
+{"id": "test-unknown-0", "split": "test", "kind": "unknown", "question": "明天广州会下雨吗"}
+{"id": "test-unknown-1", "split": "test", "kind": "unknown", "question": "公司今年营收多少亿元"}
+{"id": "test-unknown-2", "split": "test", "kind": "unknown", "question": "帮我写一首关于月亮的诗"}
+{"id": "test-unknown-3", "split": "test", "kind": "unknown", "question": "火星上有没有外星人"}
+{"id": "test-unknown-4", "split": "test", "kind": "unknown", "question": "推荐深圳最好吃的餐厅"}
+{"id": "test-unknown-5", "split": "test", "kind": "unknown", "question": "量子纠缠如何用于星际通信"}
+{"id": "test-tool-0", "split": "test", "kind": "tool", "question": "统计orders-api日志的HTTP错误率和P95延迟", "service": "orders-api"}
+{"id": "test-tool-1", "split": "test", "kind": "tool", "question": "诊断auth-api的错误率与请求数", "service": "auth-api"}
+{"id": "test-tool-2", "split": "test", "kind": "tool", "question": "orders-api固定日志里有多少请求和503响应", "service": "orders-api"}
+{"id": "test-tool-3", "split": "test", "kind": "tool", "question": "查看auth-api日志的P95和服务端错误率", "service": "auth-api"}
+{"id": "test-tool-4", "split": "test", "kind": "tool", "question": "结合知识库诊断orders-api的日志延迟", "service": "orders-api"}
+{"id": "test-tool-5", "split": "test", "kind": "tool", "question": "统计auth-api日志里401响应的数量", "service": "auth-api"}

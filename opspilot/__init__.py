@@ -1,1 +1,1 @@
-"""OpsPilot: evidence-grounded knowledge retrieval and incident analysis."""
+"""OpsPilot: evidence-linked analysis of local pytest failures."""

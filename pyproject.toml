@@ -4,15 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "opspilot"
-version = "0.1.0"
-description = "Evidence-grounded incident assistant with reproducible retrieval evaluation"
+version = "0.2.0"
+description = "Local pytest failure triage with Git diffs, project notes and evidence-linked reports"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{name = "YGCYJA"}]
-keywords = ["rag", "incident-analysis", "langgraph", "retrieval", "observability"]
-dependencies = ["fastapi>=0.115,<1", "uvicorn>=0.30,<1", "langgraph>=1,<2", "httpx>=0.27,<1"]
+keywords = ["pytest", "debugging", "rag", "junit", "developer-tools"]
+dependencies = ["fastapi>=0.115,<1", "uvicorn>=0.30,<1", "httpx>=0.27,<1"]
 
 [project.urls]
 Homepage = "https://github.com/YGCYJA/opspilot"
@@ -20,8 +20,7 @@ Issues = "https://github.com/YGCYJA/opspilot/issues"
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<10"]
-semantic = ["sentence-transformers>=3,<6"]
-local = ["sentence-transformers>=3,<6", "transformers>=4.51,<5", "lm-format-enforcer>=0.10,<1"]
+local = ["torch>=2.2", "transformers>=4.51,<5", "lm-format-enforcer>=0.10,<1"]
 
 [project.scripts]
 opspilot = "opspilot.cli:main"
@@ -30,7 +29,7 @@ opspilot = "opspilot.cli:main"
 include = ["opspilot*"]
 
 [tool.setuptools.package-data]
-opspilot = ["resources/data/*.csv", "resources/data/*.jsonl", "resources/data/knowledge/*.md"]
+opspilot = ["web/*.html"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

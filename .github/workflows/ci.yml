@@ -21,7 +21,10 @@ jobs:
           cache: pip
       - run: python -m pip install -e '.[dev]'
       - run: python -m pytest -q
-      - run: opspilot eval --split test --output reports/generated
+      - name: Reproduce and analyze a real pytest regression
+        run: |
+          python scripts/reproduce_pytest_demo.py --output-dir var/ci_demo
+          opspilot triage --repo var/ci_demo/project --junit var/ci_demo/junit.xml --base HEAD --notes var/ci_demo/project/docs --output var/ci_demo/report --offline
 
   distribution:
     runs-on: ubuntu-24.04
@@ -30,28 +33,31 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
-      - run: python -m pip install build
+      - run: python -m pip install build pytest
+      - run: python scripts/reproduce_pytest_demo.py --output-dir var/distribution_demo
       - run: python -m build
-      - name: Install wheel and run outside checkout
+      - name: Install wheel and analyze outside checkout
         shell: bash
         run: |
           python -m venv "$RUNNER_TEMP/opspilot-env"
           "$RUNNER_TEMP/opspilot-env/bin/python" -m pip install dist/*.whl
           mkdir "$RUNNER_TEMP/opspilot-smoke"
           cd "$RUNNER_TEMP/opspilot-smoke"
-          "$RUNNER_TEMP/opspilot-env/bin/opspilot" ask '统计 orders-api 的错误率和 P95 延迟' --json > answer.json
-          "$RUNNER_TEMP/opspilot-env/bin/opspilot" ingest
-          "$RUNNER_TEMP/opspilot-env/bin/opspilot" eval --output reports
+          "$RUNNER_TEMP/opspilot-env/bin/opspilot" triage --repo "$GITHUB_WORKSPACE/var/distribution_demo/project" --junit "$GITHUB_WORKSPACE/var/distribution_demo/junit.xml" --base HEAD --notes "$GITHUB_WORKSPACE/var/distribution_demo/project/docs" --output report --offline --json > answer.json
           "$RUNNER_TEMP/opspilot-env/bin/python" - <<'PY'
           import json
           from fastapi.testclient import TestClient
           from opspilot.api import create_app
           result = json.load(open('answer.json', encoding='utf-8'))
-          assert result['status'] == 'answered'
-          assert result['log_stats']['requests'] == 100
-          assert result['log_stats']['http_error_rate'] == 0.2
-          assert result['log_stats']['p95_ms'] == 1980.0
+          assert result['status'] == 'analysis_ready'
+          assert result['summary']['failures'] == 1 and result['summary']['passed'] == 4
+          assert result['first_failure']['nodeid'] == 'test_cart.py::test_discount_at_threshold'
+          assert result['related_changes'][0]['path'] == 'cart.py'
+          assert any(e['kind'] == 'project_note' for e in result['evidence'])
+          assert result['reproduction']['executed'] is False
           with TestClient(create_app()) as client:
               assert client.get('/health').status_code == 200
-              assert client.post('/ask', json={'question': '统计 orders-api 的请求数'}).json()['status'] == 'answered'
+              assert 'pytest' in client.get('/').text
           PY
+      - name: Build container
+        run: docker build --tag opspilot-ci .

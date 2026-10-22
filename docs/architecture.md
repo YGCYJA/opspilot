@@ -1,65 +1,87 @@
 # Architecture
 
-OpsPilot keeps retrieval, deterministic observations, and optional model generation visible in one bounded workflow.
+OpsPilot analyzes a local pytest failure without importing or executing the target project. The report combines deterministic observations with optional explanations.
 
 ```mermaid
 flowchart LR
-  Q[Question + optional time window] --> P[Prepare service and session context]
-  P --> PL[Plan: rules or model]
-  PL --> T[Execute up to 3 allowlisted calls]
-  K[Markdown chunks] --> T
-  L[Local CSV] --> T
-  T --> A[Extract or generate claims]
-  A --> V[Check citations and statistics contract]
-  V --> R[Answer / refusal / clarification]
-  R --> S[(SQLite run trace)]
+  J[JUnit XML] --> P[Parse failures and errors]
+  P --> C[Collect bounded local context]
+  R[Selected repository source] --> C
+  G[Explicit Git baseline] --> C
+  N[Optional Markdown notes] --> C
+  C --> E[Evidence and observations]
+  E --> H[Unverified hypotheses]
+  M[Optional model explanation] --> H
+  E --> O[JSON and Markdown report]
+  H --> O
 ```
 
-## Retrieval
+## Inputs and collection
 
-Markdown headings define sections; bounded line windows split sections into passages (default 480 characters, one overlapping line). Every passage retains its document ID and source lines. A hash of document, position, and text identifies the passage, so changed evidence receives a changed citation ID.
+The user supplies the repository and XML paths. `base_ref` and `notes_dir` are optional. A baseline is a comparison target supplied by the user, not a claim that the chosen commit passed the tests. Analysis reads the current working tree; it does not check out the baseline or change files.
 
-BM25 tokenizes English terms and Chinese character bigrams. Character TF-IDF uses trigrams. `hybrid` fuses their rankings using reciprocal rank fusion with constant 60; it is lexical fusion. `semantic` fuses BM25 with normalized local SentenceTransformer cosine ranking. The agent also applies a lexical coverage/BM25 admission heuristic, including in semantic mode; semantic ranking does not bypass that filter.
+The parser counts test-case outcomes and expands the first failing or errored test case in XML document order, preserving its assertion or traceback as evidence. Skipped tests are not counted as passing tests. Source collection uses paths available in the test result and traceback. It only reads source that resolves inside the selected repository. Missing paths or unfamiliar traceback formats leave context incomplete.
 
-Indexes are built in memory at startup. The CLI `ingest` command exports JSON for inspection; the app does not load that exported index. This is intended for small corpora rather than a distributed search service.
+When a baseline is present, a local Git comparison supplies changed code. The comparison cannot establish causality: several unrelated changes can be present in the same diff. Untracked files and generated dependencies may also lack a useful baseline comparison.
 
-## Planning and tools
+Optional note retrieval indexes a small Markdown directory inside the selected repository using BM25. Passages retain their file and source lines. The deterministic failure evidence does not depend on a retrieval match. This keeps the basic workflow usable without a curated knowledge base or an embedding model.
 
-The graph always follows `prepare → plan → execute → answer → verify`. It does not autonomously loop. Tool arguments are validated with Pydantic and extra arguments are rejected.
+## Report contract
 
-| Tool | Input | Output |
-|---|---|---|
-| `search_knowledge` | question string | up to 5 passages with ranking and source metadata |
-| `analyze_service_logs` | allowlisted service, optional start/end | deterministic statistics and complete JSON observation |
+The top-level fields are:
 
-The statistical intent rules recognize named services and common metric requests. Missing or ambiguous services produce `needs_clarification` without a model request. Session context can reuse the last service for explicit follow-ups such as “继续查询该服务”; it is not full conversational memory.
-
-The model planner must include search and, for statistical tasks, the log tool. It cannot change the requested service or time bounds. Invalid plans fall back to rules and expose `mode=offline_fallback`. Proposed model calls remain in the trace when available. Tools never execute shell commands or modify a service.
-
-## Answer contracts
-
-Offline answers extract existing passages and include deterministic log observations. Model answers provide structured claims, each with a source ID and a continuous verbatim quote of at least six characters. Statistical model answers must preserve the complete log JSON observation; missing or altered values trigger fallback. Empty-window results cannot be rewritten as a zero error rate or healthy service.
-
-| Field | Meaning |
+| Field | Purpose |
 |---|---|
-| `status=answered` | the output passed the implemented evidence contract |
-| `status=refused` | insufficient evidence or failed answer validation |
-| `status=needs_clarification` | a statistical request needs one supported service |
-| `mode=offline` | rule planning / extractive output, including clarification |
-| `mode=llm` | model workflow completed without fallback |
-| `mode=offline_fallback` | model workflow failed and deterministic behavior was used |
+| `schema_version` | version of the report structure |
+| `status` | `analysis_ready`, `no_failures`, or `invalid_input` |
+| `summary` | counts of tests, passed tests, failures, errors, and skips |
+| `first_failure` | selected failed test and available failure details |
+| `report_sha256` | fingerprint of the exact JUnit bytes that were parsed |
+| `evidence` | items with IDs, kinds, paths, source lines, and text |
+| `observations` | directly collected statements and their evidence IDs |
+| `hypotheses` | possible explanations, explicitly `unverified` |
+| `missing_evidence` | useful context that could not be collected |
+| `diff_match` | association outcome, candidate paths, and available locations |
+| `related_changes` | bounded static import/call associations with changed local modules |
+| `reproduction` | suggested argument vector, working directory, and `executed: false` |
+| `model` | actual model mode, outcome, and request count |
+| `warnings` | input, collection, and optional explanation limits |
 
-Both remote and local model adapters report workflow mode as `llm`; `model_backend` distinguishes `http` and `local_transformers`. If model generation fails, deterministic statistics can still be returned; without statistics the answer is refused and retrieval evidence remains available for inspection.
+`analysis_ready` means a report was assembled, not that the cause has been found. `no_failures` means the supplied XML has no failure/error cases for analysis. `invalid_input` means a required input cannot be accepted; the CLI returns exit code 2. The other two outcomes return exit code 0.
 
-## Persistence and data flow
+Evidence IDs link observations and explanations to inspectable text. A line number belongs to the file read at analysis time. It cannot prove that the source has remained unchanged since pytest produced the XML.
 
-`Store` saves JSON runs in SQLite under the writable state directory. A run includes evidence, plans, tool timings, claims, status, warnings, and model usage. Local model runs also retain generation records. Model providers receive the question and retrieved evidence in opt-in HTTP mode. Review data before using external providers or sharing run traces.
+The `diff_match` outcome distinguishes an unrequested comparison, unavailable Git context, no association, and a found association. It retains the explicit `base_ref` and resolved `base_commit` when available. A changed file is an inspection candidate. Even an association with a reported location does not establish that the change caused the failure.
+
+When a traceback points to a test rather than the changed implementation, a one-hop AST check can associate a top-level import and call in that test with a changed local function. This is recorded in `related_changes`, separately from a direct traceback match. It does not import Python modules, follow a recursive call graph, or prove runtime dispatch; ambiguous or shadowed names are omitted. The cart demo uses this distinction: the assertion is in `test_cart.py`, while the comparison change is in `cart.py`.
+
+## Collection limits
+
+JUnit input must be a regular XML file of at most 2 MiB, with a `testsuite` or `testsuites` root and at least one test case. DTD/entity declarations are rejected. Local source is limited to eligible regular files of at most 128 KiB. Symbolic links and sensitive/ignored directories are excluded.
+
+Git reads have a five-second timeout and bounded output (200,000 bytes per read), and consider up to 12 eligible changed tracked files. Deleted and untracked files are not analyzed. Notes are limited to 30 Markdown files, 64,000 bytes per file, a 256,000-byte budget, 100 visited directories and six directory levels. These limits deliberately leave some context out; warnings and missing evidence should be read as part of the result.
+
+## Optional explanation layer
+
+Offline mode is the default. It collects evidence and proposes bounded next checks without a model call. A configured HTTP or local model may add a structured explanation using the collected evidence. The model does not select a repository, execute commands, alter the baseline, or apply fixes.
+
+Model references and quoted text are checked against the collected evidence. Invalid or unavailable model output leaves the deterministic evidence usable and exposes the model outcome in the report. A valid citation does not prove that a hypothesis follows from it. Hypotheses remain unverified regardless of their origin.
+
+Source text and notes are untrusted input. They are evidence, not instructions to grant the model new actions. The absence of execution capabilities limits what the explanation step can do; it does not make every model interpretation reliable.
+
+## Local state and interface
+
+The CLI can print a report and explicitly save `report.json` and `report.md` under `--output DIRECTORY`. The application does not keep a SQLite conversation history. Keep generated reports out of version control unless they are deliberately reviewed fixtures.
+
+The HTTP form calls the same analysis function as the CLI. Request paths refer to the server's filesystem. There is no authentication or remote upload service. Run it on `127.0.0.1`; the form is a convenience for the person who owns that local environment.
 
 ## Boundaries
 
-- Citation validation proves that a quoted span exists in the cited evidence. It does not prove that the claim follows from the quote or is factually correct.
-- Intent detection and service selection use rules. The two services and accepted log provenance types are explicit constraints.
-- No authentication, tenancy isolation, retention policy, production telemetry ingestion, or distributed task queue is included. SQLite is intended for local use.
-- Redaction removes configured keys and common bearer/key patterns. It does not identify every secret or personal detail.
-- Local small-model generation is experimental; structured output constraints can still lead to truncation or fallback.
-- Retrieval and model evaluations use small authored fixtures. Their scores are not estimates of real-world reliability.
+- Target Python code is never imported; reproduction commands are suggestions, not executed actions.
+- Only an explicitly chosen Git baseline is compared. The tool does not find the last successful CI run.
+- XML may omit paths, hide the original exception, or come from a different code revision.
+- Source collection and note retrieval are bounded context, not a complete understanding of the repository.
+- Redaction covers common credential patterns; it is not a guarantee that every private value is removed.
+- The included cart regression is constructed and small. It demonstrates evidence collection, not broad diagnosis accuracy.
+
+See [design decisions](design-decisions.md) for the reasons behind this scope.

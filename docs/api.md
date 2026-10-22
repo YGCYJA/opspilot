@@ -1,53 +1,55 @@
-# HTTP API
+# Local HTTP API
 
 ```bash
 python -m uvicorn opspilot.api:app --host 127.0.0.1 --port 8000
 ```
 
-Interactive OpenAPI documentation is at `/docs`; `/` redirects there. Configuration is loaded at application startup. The API has no authentication; use a trusted local environment or put appropriate authentication and access controls in front of it.
+Open `/` for a local report form or `/docs` for interactive OpenAPI documentation. The service has no authentication and accepts paths on the server's filesystem. Keep it on loopback; it is not a public file-analysis endpoint.
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/health` | configured mode, retriever and chunk count |
-| POST | `/ask` | execute a workflow and persist its run |
-| GET | `/search?q=...&k=5` | direct ranked passages (`1 <= k <= 10`) |
-| GET | `/documents` | available document IDs and chunk count |
-| GET | `/runs/{run_id}` | retrieve a persisted run; 404 if absent |
+| GET | `/` | local input form and report view |
+| GET | `/health` | local service readiness |
+| POST | `/triage` | analyze selected local pytest artifacts |
 
-## Ask
+## Analyze a failure
+
+Run the example generator before using these example paths:
 
 ```bash
-curl -sS http://127.0.0.1:8000/ask \
+python scripts/reproduce_pytest_demo.py
+curl -sS http://127.0.0.1:8000/triage \
   -H 'Content-Type: application/json' \
-  -d '{"question":"统计 orders-api 的错误率和 P95 延迟","session_id":"demo-session"}'
+  -d '{
+    "repo": "var/pytest_demo/project",
+    "junit": "var/pytest_demo/junit.xml",
+    "base_ref": "HEAD",
+    "notes_dir": "var/pytest_demo/project/docs"
+  }'
 ```
 
-`question` is required, non-blank, and at most 1500 characters. Optional `session_id` accepts 1–64 ASCII letters, digits, underscores and hyphens; omission creates a new session. Optional `start_time` and `end_time` are ISO8601 timestamps with timezone offsets, such as `2026-10-20T09:00:00Z`.
+| Request field | Required | Meaning |
+|---|---|---|
+| `repo` | yes | existing local project directory |
+| `junit` | yes | local pytest JUnit XML file |
+| `base_ref` | no | explicit Git baseline, such as `HEAD` or `HEAD~1` |
+| `notes_dir` | no | local directory of relevant Markdown project rules inside `repo` |
+| `offline` | no | `true` skips the optional model regardless of `OPS_MODE` (default `false`) |
 
-```json
-{
-  "question": "统计 orders-api 的请求数",
-  "session_id": "window-demo",
-  "start_time": "2026-10-20T09:00:00Z",
-  "end_time": "2026-10-20T10:00:00Z"
-}
-```
+Relative paths resolve from the server process's working directory. The browser does not upload files, and the API does not fetch a GitHub URL. Do not supply an arbitrary remote path and expect it to be cloned.
 
-Important response fields:
+The response is the report described in [architecture](architecture.md#report-contract). Inspect `status` before reading the hypotheses:
 
-| Field | Meaning |
-|---|---|
-| `run_id`, `session_id` | identifiers for this run and follow-up context |
-| `status` | `answered`, `refused`, or `needs_clarification` |
-| `mode`, `model_backend` | actual workflow/fallback mode and model implementation |
-| `answer`, `claims` | output text and individual claims with evidence quotes |
-| `evidence` | retrieved passages and deterministic tool observations |
-| `plan`, `trace` | selected calls, proposed calls when available, and execution outcomes |
-| `log_stats` | selected service/window statistics, or an empty object without log observation |
-| `data_kind` | provenance (`null` for an empty log window) |
-| `warnings` | fallback and tool failure details |
-| `latency_ms`, `model_calls`, `usage` | timing and adapter usage (provider usage may be unavailable) |
+- `analysis_ready`: failure evidence was collected; the cause is still unverified.
+- `no_failures`: the supplied XML contains no failures/errors to analyze.
+- `invalid_input`: a required path or artifact could not be accepted.
 
-HTTP 200 means the workflow ran; check `status` for the application outcome. A refused answer or clarification is a normal 200 response. Invalid request fields or time bounds return 422. Validation responses omit raw input to reduce accidental credential exposure. Source evidence and saved traces may still contain sensitive material outside the redaction patterns; inspect before sharing.
+HTTP 200 covers `analysis_ready` and `no_failures`. Invalid request fields, required local inputs, or model configuration return 422. A usable report can still have warnings about missing optional context.
 
-`/health.mode` reports the configured mode (`local` is possible); `/ask.mode` reports whether the actual workflow used a model, offline extraction or fallback. These fields serve different purposes.
+`observations` and `hypotheses` reference entries in `evidence`. Every hypothesis remains `unverified`. `reproduction.executed` is `false`; the service does not execute that command. The `model` object and `warnings` expose whether optional explanation generation was used and whether it succeeded.
+
+## Data handling
+
+The analysis reads the selected local files and returns a report. There is no persistent conversation/run database. Save a report explicitly with the CLI when needed. The optional external model mode sends collected context to the configured provider; offline mode makes no model request.
+
+Test failure text, source, and project notes can contain credentials or personal information. Common-pattern redaction is a useful reduction, not comprehensive detection. Review the collected context before enabling an external provider or sharing a response.

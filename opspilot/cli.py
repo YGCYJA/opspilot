@@ -4,52 +4,39 @@ import argparse
 import json
 from pathlib import Path
 
-from .config import build_agent
-from .paths import resolve_data_dir, resolve_state_dir
-from .retrieval import ingest, save_index
+from .models import model_factory_from_env
+from .triage import analyze_failure, render_report
 
 
 def main():
-    parser = argparse.ArgumentParser(description="OpsPilot 知识库与故障诊断 Agent")
-    sub = parser.add_subparsers(dest="command", required=True)
-    ask = sub.add_parser("ask")
-    ask.add_argument("question")
-    ask.add_argument("--session", default=None)
-    ask.add_argument("--json", action="store_true")
-    ask.add_argument("--start-time", default=None)
-    ask.add_argument("--end-time", default=None)
-    index = sub.add_parser("ingest")
-    index.add_argument("--directory", type=Path, default=None,
-                       help="Markdown directory (default: resolved data directory / knowledge)")
-    index.add_argument("--output", type=Path, default=None,
-                       help="Index file (default: OPS_STATE_DIR/index.json or ./var/index.json)")
-    evaluate = sub.add_parser("eval")
-    evaluate.add_argument("--split", choices=["dev", "test"], default="test")
-    evaluate.add_argument("--output", type=Path, default=Path("reports"))
-    evaluate.add_argument("--semantic", action="store_true")
+    parser = argparse.ArgumentParser(description='OpsPilot：分析本地 pytest 失败、关联改动并整理证据')
+    commands = parser.add_subparsers(dest='command', required=True)
+    triage = commands.add_parser('triage', help='Read a JUnit report and local project without executing project code')
+    triage.add_argument('--repo', type=Path, required=True, help='Existing local Python project directory')
+    triage.add_argument('--junit', type=Path, required=True, help='pytest --junitxml report')
+    triage.add_argument('--base', dest='base_ref', help='Explicit local Git base ref; HEAD compares committed baseline with working tree')
+    triage.add_argument('--notes', type=Path, help='Markdown project rules directory, inside the analyzed repository')
+    triage.add_argument('--output', type=Path, help='Directory for report.json and report.md')
+    triage.add_argument('--json', action='store_true', help='Print JSON instead of Markdown')
+    triage.add_argument('--offline', action='store_true', help='Skip optional model even if OPS_MODE is configured')
     args = parser.parse_args()
-    if args.command == "ingest":
-        directory = args.directory if args.directory is not None else resolve_data_dir() / "knowledge"
-        output = args.output if args.output is not None else resolve_state_dir() / "index.json"
-        chunks = ingest(directory)
-        if not chunks:
-            parser.error(f"No Markdown knowledge found in {directory}")
-        save_index(chunks, output)
-        print(f"Indexed {len(chunks)} chunks from {len({c.doc_id for c in chunks})} documents -> {output}")
-    elif args.command == "eval":
-        from .evaluate import evaluate
-        print(json.dumps(evaluate(args.split, args.output, args.semantic), ensure_ascii=False, indent=2))
-    else:
-        result = build_agent().ask(args.question, args.session, start_time=args.start_time, end_time=args.end_time)
-        if args.json:
-            print(json.dumps(result, ensure_ascii=False, indent=2))
-        else:
-            print(f"mode={result['mode']} status={result['status']} latency={result['latency_ms']}ms")
-            print(result["answer"])
-            for warning in result["warnings"]:
-                print("提示：" + warning)
-            print(f"run_id={result['run_id']} session_id={result['session_id']}")
+    try:
+        factory = model_factory_from_env(args.offline)
+    except ValueError as error:
+        parser.error(str(error))
+    result = analyze_failure(args.repo, args.junit, args.base_ref, args.notes, factory)
+    report = render_report(result)
+    if args.output:
+        try:
+            args.output.mkdir(parents=True, exist_ok=True)
+            (args.output / 'report.json').write_text(json.dumps(result, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+            (args.output / 'report.md').write_text(report, encoding='utf-8')
+        except OSError:
+            parser.exit(2, 'Could not write output directory; choose a writable location.\n')
+    print(json.dumps(result, ensure_ascii=False, indent=2) if args.json else report)
+    if result['status'] == 'invalid_input':
+        raise SystemExit(2)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

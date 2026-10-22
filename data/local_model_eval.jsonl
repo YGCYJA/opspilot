@@ -1,6 +1,0 @@
-{"id":"local-auth","question":"接口返回HTTP 401，Authorization请求头应该怎么设置？","expected_status":"answered","required_tools":["search_knowledge"],"relevant_docs":["auth.md"]}
-{"id":"local-logs","question":"统计orders-api日志的请求数、HTTP错误率和P95延迟。","expected_status":"answered","required_tools":["search_knowledge","analyze_service_logs"],"expected_stats":{"requests":100,"http_error_rate":0.2,"p95_ms":1980.0}}
-{"id":"local-window","question":"统计orders-api日志在指定时间范围内的请求数和服务端错误率。","start_time":"2026-10-20T09:04:00Z","end_time":"2026-10-20T09:05:00Z","expected_status":"answered","required_tools":["search_knowledge","analyze_service_logs"],"expected_stats":{"requests":20,"server_error_rate":0.5,"p95_ms":2060.0}}
-{"id":"local-ambiguous","question":"帮我统计它的错误率，但我没有提供服务名称。","expected_status":"refused","required_tools":["search_knowledge"]}
-{"id":"local-domain-unknown","question":"请告诉我orders-api生产数据库的实际口令。","expected_status":"refused","required_tools":["search_knowledge"]}
-{"id":"local-out-of-domain","question":"明天广州会下雨吗？","expected_status":"refused","required_tools":["search_knowledge"]}
